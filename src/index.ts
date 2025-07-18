@@ -18,9 +18,6 @@ app.post("/interactions", async (c: Context): Promise<Response> => {
   const signature = c.req.header('x-signature-ed25519')!
   const timestamp = c.req.header('x-signature-timestamp')!
   const body = await c.req.text()
-  console.log('signature', signature);
-  console.log('timestamp', timestamp);
-  console.log('pub', c.env.PUBLIC_KEY);
   console.log('body', body);
   const isValid = await verifyKey(body, signature, timestamp, c.env.PUBLIC_KEY)
 
