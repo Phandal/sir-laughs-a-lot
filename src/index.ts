@@ -13,9 +13,12 @@ interface Bindings extends CloudflareBindings {
 }
 
 const verifyDiscordRequest: MiddlewareHandler = async (c: Context, next: Next) => {
-  const signature = c.req.header('X-Signature-Ed25519')!
-  const timestamp = c.req.header('X-Signature-Timestamp')!
-  const body = await c.req.text()
+  const signature = c.req.header('x-signature-ed25519')!
+  const timestamp = c.req.header('x-signature-timestamp')!
+  const body = await c.req.arrayBuffer()
+  console.log('signature', signature);
+  console.log('timestamp', timestamp);
+  console.log('pub', c.env.PUBLIC_KEY)
   const isValid = verifyKey(body, signature, timestamp, c.env.PUBLIC_KEY)
 
   if (!isValid) {
@@ -32,6 +35,7 @@ app.post("/interactions", async (c: Context): Promise<Response> => {
   const { type, data } = await c.req.json();
 
   if (type === InteractionType.PING) {
+    console.log('pong');
     return c.json({
       type: InteractionResponseType.PONG,
     });
@@ -49,6 +53,7 @@ app.post("/interactions", async (c: Context): Promise<Response> => {
   };
 
   if (data.name === 'joke') {
+    console.log('joke');
     try {
       const joke = await getRandomJoke();
       response.data.content = joke.joke;
