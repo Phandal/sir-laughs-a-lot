@@ -3,7 +3,6 @@ import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { InteractionType, InteractionResponseType, verifyKey } from 'discord-interactions';
 import { getRandomJoke } from './util';
-import { MiddlewareHandler, Next } from 'hono/types';
 
 
 interface Bindings extends CloudflareBindings {
@@ -12,27 +11,24 @@ interface Bindings extends CloudflareBindings {
   TOKEN: string;
 }
 
-const verifyDiscordRequest: MiddlewareHandler = async (c: Context, next: Next) => {
+const app = new Hono<{ Bindings: Bindings }>();
+app.use(logger(), prettyJSON());
+
+app.post("/interactions", async (c: Context): Promise<Response> => {
   const signature = c.req.header('x-signature-ed25519')!
   const timestamp = c.req.header('x-signature-timestamp')!
-  const body = await c.req.arrayBuffer()
+  const body = await c.req.text()
   console.log('signature', signature);
   console.log('timestamp', timestamp);
-  console.log('pub', c.env.PUBLIC_KEY)
-  const isValid = verifyKey(body, signature, timestamp, c.env.PUBLIC_KEY)
+  console.log('pub', c.env.PUBLIC_KEY);
+  console.log('body', body);
+  const isValid = await verifyKey(body, signature, timestamp, c.env.PUBLIC_KEY)
 
   if (!isValid) {
     return c.text('Bad_request_signature.', 401)
   }
 
-  await next()
-}
-
-const app = new Hono<{ Bindings: Bindings }>();
-app.use(verifyDiscordRequest, logger(), prettyJSON());
-
-app.post("/interactions", async (c: Context): Promise<Response> => {
-  const { type, data } = await c.req.json();
+  const { type, data } = JSON.parse(body)
 
   if (type === InteractionType.PING) {
     console.log('pong');
